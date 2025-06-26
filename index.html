@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steam清单库</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #0d1117;
+            color: #c9d1d9;
+            margin: 0;
+            padding: 20px;
+        }
+        .header {
+            margin-bottom: 20px;
+        }
+        h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .search-container {
+            margin: 20px 0;
+        }
+        #searchInput {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #30363d;
+            background-color: #0d1117;
+            color: #c9d1d9;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        .branch-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+        }
+        .branch-item {
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 10px;
+            background-color: #161b22;
+        }
+        .branch-item a {
+            color: #58a6ff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Steam清单库</h1>
+    </div>
+
+    <div class="search-container">
+        <input type="text" id="searchInput" placeholder="搜索AppID..." oninput="searchBranches()">
+    </div>
+
+    <div id="loading" class="loading">加载中...</div>
+    <div id="branchList" class="branch-list"></div>
+
+    <script>
+        let allBranches = [];
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchBranches();
+        });
+        
+        function fetchBranches() {
+            document.getElementById('loading').style.display = 'block';
+            
+            fetch('https://api.github.com/repos/wodidabaob/qingdancangku/branches?per_page=100')
+                .then(response => response.json())
+                .then(data => {
+                    allBranches = data.filter(branch => /^\d+$/.test(branch.name))
+                        .map(branch => {
+                            return {
+                                name: branch.name,
+                                url: `https://github.com/wodidabaob/qingdancangku/tree/${branch.name}`
+                            };
+                        })
+                        .sort((a, b) => a.name.localeCompare(b.name, undefined, {numeric: true}));
+                    
+                    displayBranches(allBranches);
+                    document.getElementById('loading').style.display = 'none';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('branchList').innerHTML = '<p>加载失败，请刷新页面</p>';
+                });
+        }
+        
+        function displayBranches(branches) {
+            const branchListElement = document.getElementById('branchList');
+            branchListElement.innerHTML = '';
+            
+            if (branches.length === 0) {
+                branchListElement.innerHTML = '<p>没有找到匹配的清单</p>';
+                return;
+            }
+            
+            branches.forEach(branch => {
+                const branchElement = document.createElement('div');
+                branchElement.className = 'branch-item';
+                branchElement.innerHTML = `<a href="${branch.url}" target="_blank">${branch.name}</a>`;
+                branchListElement.appendChild(branchElement);
+            });
+        }
+        
+        function searchBranches() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            if (searchTerm === '') {
+                displayBranches(allBranches);
+                return;
+            }
+            
+            const filteredBranches = allBranches.filter(branch => 
+                branch.name.toLowerCase().includes(searchTerm)
+            );
+            
+            displayBranches(filteredBranches);
+        }
+    </script>
+</body>
+</html>
